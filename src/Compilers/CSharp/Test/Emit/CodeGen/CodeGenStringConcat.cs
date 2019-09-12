@@ -1986,5 +1986,107 @@ class Test
   IL_0084:  ret
 }");
         }
+
+        [Fact]
+        public void ConcatInOrder()
+        {
+            var source = @"
+using System;
+
+public class Test
+{
+    private static object A = ""A"";
+    private static string B = ""B"";
+    private static object C = ""C"";
+    private static object D = ""D"";
+
+    static void Main()
+    {        
+        Console.WriteLine(A + B + C + D);
+        Console.WriteLine(A + (B + C + D));
+    }
+}
+";
+            var comp = CompileAndVerify(source, expectedOutput: @"ABCD
+ABCD");
+
+            comp.VerifyDiagnostics();
+            comp.VerifyIL("Test.Main", @"
+  // Code size      160 (0xa0)
+  .maxstack  4
+  .locals init (object V_0,
+                string V_1,
+                string V_2,
+                string V_3,
+                object V_4,
+                string V_5)
+  IL_0000:  ldsfld     ""object Test.A""
+  IL_0005:  stloc.0
+  IL_0006:  ldsfld     ""string Test.B""
+  IL_000b:  stloc.2
+  IL_000c:  ldsfld     ""object Test.C""
+  IL_0011:  ldsfld     ""object Test.D""
+  IL_0016:  stloc.s    V_4
+  IL_0018:  ldloc.0
+  IL_0019:  brtrue.s   IL_001e
+  IL_001b:  ldnull
+  IL_001c:  br.s       IL_0024
+  IL_001e:  ldloc.0
+  IL_001f:  callvirt   ""string object.ToString()""
+  IL_0024:  stloc.1
+  IL_0025:  dup
+  IL_0026:  brtrue.s   IL_002c
+  IL_0028:  pop
+  IL_0029:  ldnull
+  IL_002a:  br.s       IL_0031
+  IL_002c:  callvirt   ""string object.ToString()""
+  IL_0031:  stloc.3
+  IL_0032:  ldloc.s    V_4
+  IL_0034:  brtrue.s   IL_0039
+  IL_0036:  ldnull
+  IL_0037:  br.s       IL_0040
+  IL_0039:  ldloc.s    V_4
+  IL_003b:  callvirt   ""string object.ToString()""
+  IL_0040:  stloc.s    V_5
+  IL_0042:  ldloc.1
+  IL_0043:  ldloc.2
+  IL_0044:  ldloc.3
+  IL_0045:  ldloc.s    V_5
+  IL_0047:  call       ""string string.Concat(string, string, string, string)""
+  IL_004c:  call       ""void System.Console.WriteLine(string)""
+  IL_0051:  ldsfld     ""object Test.A""
+  IL_0056:  ldsfld     ""string Test.B""
+  IL_005b:  stloc.s    V_5
+  IL_005d:  ldsfld     ""object Test.C""
+  IL_0062:  ldsfld     ""object Test.D""
+  IL_0067:  stloc.s    V_4
+  IL_0069:  dup
+  IL_006a:  brtrue.s   IL_0070
+  IL_006c:  pop
+  IL_006d:  ldnull
+  IL_006e:  br.s       IL_0075
+  IL_0070:  callvirt   ""string object.ToString()""
+  IL_0075:  stloc.3
+  IL_0076:  ldloc.s    V_4
+  IL_0078:  brtrue.s   IL_007d
+  IL_007a:  ldnull
+  IL_007b:  br.s       IL_0084
+  IL_007d:  ldloc.s    V_4
+  IL_007f:  callvirt   ""string object.ToString()""
+  IL_0084:  stloc.2
+  IL_0085:  dup
+  IL_0086:  brtrue.s   IL_008c
+  IL_0088:  pop
+  IL_0089:  ldnull
+  IL_008a:  br.s       IL_0091
+  IL_008c:  callvirt   ""string object.ToString()""
+  IL_0091:  ldloc.s    V_5
+  IL_0093:  ldloc.3
+  IL_0094:  ldloc.2
+  IL_0095:  call       ""string string.Concat(string, string, string, string)""
+  IL_009a:  call       ""void System.Console.WriteLine(string)""
+  IL_009f:  ret
+}");
+        }
     }
 }

@@ -43,13 +43,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return RewriteStringConcatInExpressionLambda(syntax, operatorKind, loweredLeft, loweredRight, type);
             }
 
-            // Convert both sides to a string (calling ToString if necessary)
-            loweredLeft = ConvertConcatExprToString(syntax, loweredLeft);
-            loweredRight = ConvertConcatExprToString(syntax, loweredRight);
-
-            Debug.Assert(loweredLeft.Type.IsStringType() || loweredLeft.ConstantValue?.IsNull == true || loweredLeft.Type.IsErrorType());
-            Debug.Assert(loweredRight.Type.IsStringType() || loweredRight.ConstantValue?.IsNull == true || loweredRight.Type.IsErrorType());
-
             // try fold two args without flattening.
             var folded = TryFoldTwoConcatOperands(syntax, loweredLeft, loweredRight);
             if (folded != null)
@@ -57,72 +50,170 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return folded;
             }
 
-            // flatten and merge -  ( expr1 + "A" ) + ("B" + expr2) ===> (expr1 + "AB" + expr2)
-            ArrayBuilder<BoundExpression> leftFlattened = ArrayBuilder<BoundExpression>.GetInstance();
-            ArrayBuilder<BoundExpression> rightFlattened = ArrayBuilder<BoundExpression>.GetInstance();
+            // Evaluations are always left->right
+            // If either side is a BoundStringConcatenation, its ToString calls must come before
+            // any that we create this time (but if both sides are BoundStringConcatenation, again
+            // we go left->right)
 
-            FlattenConcatArg(loweredLeft, leftFlattened);
-            FlattenConcatArg(loweredRight, rightFlattened);
+            var evaluations = ArrayBuilder<BoundExpression>.GetInstance();
+            var toStrings = ArrayBuilder<BoundExpression>.GetInstance();
+            var concatArguments = ArrayBuilder<BoundExpression>.GetInstance();
+            var locals = ArrayBuilder<LocalSymbol>.GetInstance();
 
-            if (leftFlattened.Any() && rightFlattened.Any())
+            BoundAssignmentOperator leftToStringStore = null;
+
+            // For both evaluations and toStrings, we need the left's side then the right's side
+            if (loweredLeft is BoundStringConcatenation leftConcat)
             {
-                folded = TryFoldTwoConcatOperands(syntax, leftFlattened.Last(), rightFlattened.First());
-                if (folded != null)
+                evaluations.AddRange(leftConcat.Evaluations);
+                toStrings.AddRange(leftConcat.ToStrings);
+                concatArguments.AddRange(leftConcat.StringConcatArguments);
+                locals.AddRange(leftConcat.Locals);
+            }
+            else
+            {
+                if (CanChangeValueBetweenReads(loweredLeft))
                 {
-                    rightFlattened[0] = folded;
-                    leftFlattened.RemoveLast();
+                    var evaluatedTemp = _factory.StoreToTemp(loweredLeft, out var evaluatedStore);
+                    evaluations.Add(evaluatedStore);
+                    locals.Add(evaluatedTemp.LocalSymbol);
+                    loweredLeft = evaluatedTemp;
                 }
+
+                loweredLeft = ConvertConcatExprToString(syntax, loweredLeft, out bool hasSideEffects);
+                if (hasSideEffects)
+                {
+                    var toStringTemp = _factory.StoreToTemp(loweredLeft, out leftToStringStore);
+                    locals.Add(toStringTemp.LocalSymbol);
+                    loweredLeft = toStringTemp;
+                }
+
+                concatArguments.Add(loweredLeft);
             }
 
-            leftFlattened.AddRange(rightFlattened);
-            rightFlattened.Free();
+            if (loweredRight is BoundStringConcatenation rightConcat)
+            {
+                evaluations.AddRange(rightConcat.Evaluations);
+                toStrings.AddRange(rightConcat.ToStrings);
+                concatArguments.AddRange(rightConcat.StringConcatArguments);
+                locals.AddRange(rightConcat.Locals);
+            }
+            else
+            {
+                if (CanChangeValueBetweenReads(loweredRight))
+                {
+                    var evaluatedTemp = _factory.StoreToTemp(loweredRight, out var evaluatedStore);
+                    evaluations.Add(evaluatedStore);
+                    locals.Add(evaluatedTemp.LocalSymbol);
+                    loweredRight = evaluatedTemp;
+                }
 
-            BoundExpression result;
+                loweredRight = ConvertConcatExprToString(syntax, loweredRight, out bool hasSideEffects);
+                if (hasSideEffects)
+                {
+                    var toStringTemp = _factory.StoreToTemp(loweredRight, out var toStringStore);
+                    toStrings.Add(toStringStore);
+                    locals.Add(toStringTemp.LocalSymbol);
+                    loweredRight = toStringTemp;
+                }
 
-            switch (leftFlattened.Count)
+                concatArguments.Add(loweredRight);
+            }
+
+            toStrings.AddIfNotNull(leftToStringStore);
+
+            // Convert both sides to a string (calling ToString if necessary)
+            //loweredLeft = ConvertConcatExprToString(syntax, loweredLeft);
+            //loweredRight = ConvertConcatExprToString(syntax, loweredRight);
+
+            //Debug.Assert(loweredLeft.Type.IsStringType() || loweredLeft.ConstantValue?.IsNull == true || loweredLeft.Type.IsErrorType());
+            //Debug.Assert(loweredRight.Type.IsStringType() || loweredRight.ConstantValue?.IsNull == true || loweredRight.Type.IsErrorType());
+
+
+
+            //// flatten and merge -  ( expr1 + "A" ) + ("B" + expr2) ===> (expr1 + "AB" + expr2)
+            //ArrayBuilder<BoundExpression> leftFlattened = ArrayBuilder<BoundExpression>.GetInstance();
+            //ArrayBuilder<BoundExpression> rightFlattened = ArrayBuilder<BoundExpression>.GetInstance();
+
+            //FlattenConcatArg(loweredLeft, leftFlattened);
+            //FlattenConcatArg(loweredRight, rightFlattened);
+
+            //if (leftFlattened.Any() && rightFlattened.Any())
+            //{
+            //    folded = TryFoldTwoConcatOperands(syntax, leftFlattened.Last(), rightFlattened.First());
+            //    if (folded != null)
+            //    {
+            //        rightFlattened[0] = folded;
+            //        leftFlattened.RemoveLast();
+            //    }
+            //}
+
+            //leftFlattened.AddRange(rightFlattened);
+            //rightFlattened.Free();
+
+            BoundExpression stringConcatCall;
+
+            switch (concatArguments.Count)
             {
                 case 0:
-                    result = _factory.StringLiteral(string.Empty);
+                    stringConcatCall = _factory.StringLiteral(string.Empty);
                     break;
 
                 case 1:
                     // All code paths which reach here (through TryFoldTwoConcatOperands) have already called
                     // RewriteStringConcatenationOneExpr if necessary
-                    result = leftFlattened[0];
+                    stringConcatCall = concatArguments[0];
                     break;
 
                 case 2:
-                    var left = leftFlattened[0];
-                    var right = leftFlattened[1];
-                    result = RewriteStringConcatenationTwoExprs(syntax, left, right);
+                    var left = concatArguments[0];
+                    var right = concatArguments[1];
+                    stringConcatCall = RewriteStringConcatenationTwoExprs(syntax, left, right);
                     break;
 
                 case 3:
                     {
-                        var first = leftFlattened[0];
-                        var second = leftFlattened[1];
-                        var third = leftFlattened[2];
-                        result = RewriteStringConcatenationThreeExprs(syntax, first, second, third);
+                        var first = concatArguments[0];
+                        var second = concatArguments[1];
+                        var third = concatArguments[2];
+                        stringConcatCall = RewriteStringConcatenationThreeExprs(syntax, first, second, third);
                     }
                     break;
 
                 case 4:
                     {
-                        var first = leftFlattened[0];
-                        var second = leftFlattened[1];
-                        var third = leftFlattened[2];
-                        var fourth = leftFlattened[3];
-                        result = RewriteStringConcatenationFourExprs(syntax, first, second, third, fourth);
+                        var first = concatArguments[0];
+                        var second = concatArguments[1];
+                        var third = concatArguments[2];
+                        var fourth = concatArguments[3];
+                        stringConcatCall = RewriteStringConcatenationFourExprs(syntax, first, second, third, fourth);
                     }
                     break;
 
                 default:
-                    result = RewriteStringConcatenationManyExprs(syntax, leftFlattened.ToImmutable());
+                    stringConcatCall = RewriteStringConcatenationManyExprs(syntax, concatArguments.ToImmutable());
                     break;
             }
 
-            leftFlattened.Free();
-            return result;
+            var allSideEffects = ArrayBuilder<BoundExpression>.GetInstance();
+            allSideEffects.AddRange(evaluations);
+            allSideEffects.AddRange(toStrings);
+
+            var result = _factory.Sequence(
+                ImmutableArray<LocalSymbol>.Empty,
+                allSideEffects.ToImmutableAndFree(),
+                stringConcatCall);
+
+            return new BoundStringConcatenation(
+                syntax,
+                locals.ToImmutableAndFree(),
+                ImmutableArray<BoundExpression>.Empty,
+                evaluations.ToImmutableAndFree(),
+                toStrings.ToImmutableAndFree(),
+                concatArguments.ToImmutableAndFree(),
+                result,
+                _compilation.GetSpecialType(SpecialType.System_String))
+            { WasCompilerGenerated = true };
         }
 
         /// <summary>
@@ -362,7 +453,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Returns an expression which converts the given expression into a string (or null).
         /// If necessary, this invokes .ToString() on the expression, to avoid boxing value types.
         /// </summary>
-        private BoundExpression ConvertConcatExprToString(SyntaxNode syntax, BoundExpression expr)
+        private BoundExpression ConvertConcatExprToString(SyntaxNode syntax, BoundExpression expr, out bool hasSideEffects)
         {
             // If it's a value type, it'll have been boxed by the +(string, object) or +(object, string)
             // operator. Undo that.
@@ -384,6 +475,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 ConstantValue cv = ((BoundLiteral)expr).ConstantValue;
                 if (cv != null)
                 {
+                    hasSideEffects = false;
+
                     if (cv.SpecialType == SpecialType.System_Char)
                     {
                         return _factory.StringLiteral(cv.CharValue.ToString());
@@ -398,6 +491,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // If it's a string already, just return it
             if (expr.Type.IsStringType())
             {
+                hasSideEffects = false;
                 return expr;
             }
 
@@ -429,8 +523,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             // types to all special value types.
             if (structToStringMethod != null && expr.Type.SpecialType != SpecialType.None)
             {
+                hasSideEffects = false;
                 return BoundCall.Synthesized(expr.Syntax, expr, structToStringMethod);
             }
+
+            // Everything below this point can have observable side-effects
+            hasSideEffects = true;
 
             // - It's a reference type (excluding unconstrained generics): no copy
             // - It's a constant: no copy
@@ -490,6 +588,30 @@ namespace Microsoft.CodeAnalysis.CSharp
                     id: currentConditionalAccessID,
                     type: _compilation.GetSpecialType(SpecialType.System_String));
             }
+        }
+
+        private class BoundStringConcatenation : BoundSequence
+        {
+            public BoundStringConcatenation(
+                SyntaxNode syntax,
+                ImmutableArray<LocalSymbol> locals,
+                ImmutableArray<BoundExpression> sideEffects,
+                ImmutableArray<BoundExpression> evaluations,
+                ImmutableArray<BoundExpression> toStrings,
+                ImmutableArray<BoundExpression> stringConcatArguments,
+                BoundExpression value,
+                TypeSymbol type,
+                bool hasErrors = false)
+                : base(syntax, locals, sideEffects, value, type, hasErrors)
+            {
+                Evaluations = evaluations;
+                ToStrings = toStrings;
+                StringConcatArguments = stringConcatArguments;
+            }
+
+            public ImmutableArray<BoundExpression> Evaluations { get; }
+            public ImmutableArray<BoundExpression> ToStrings { get; }
+            public ImmutableArray<BoundExpression> StringConcatArguments { get; }
         }
     }
 }
