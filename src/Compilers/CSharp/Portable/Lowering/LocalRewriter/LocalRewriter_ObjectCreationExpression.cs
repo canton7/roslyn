@@ -2,6 +2,7 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
@@ -67,7 +68,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return rewrittenObjectCreation;
             }
 
-            rewrittenObjectCreation = node.UpdateArgumentsAndInitializer(rewrittenArguments, argumentRefKindsOpt, newInitializerExpression: null, changeTypeOpt: node.Constructor.ContainingType);
+            rewrittenObjectCreation = UpdateConstructorAndArguments(node, rewrittenArguments, argumentRefKindsOpt);
 
             // replace "new S()" with a default struct ctor with "default(S)"
             if (node.Constructor.IsDefaultValueTypeConstructor())
@@ -97,6 +98,51 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             return MakeObjectCreationWithInitializer(node.Syntax, rewrittenObjectCreation, node.InitializerExpressionOpt, node.Type);
+        }
+
+        private BoundExpression UpdateConstructorAndArguments(BoundObjectCreationExpression node, ImmutableArray<BoundExpression> rewrittenArguments, ImmutableArray<RefKind> argumentRefKindsOpt)
+        {
+            // If it's a known type which has a constructor that takes a capacity, and they're currently calling the
+            // constructor, and we have a collection initializer (or this is a dictionary and they're using the
+            // object initializer to assign to Item) with a known number of elements, then call the capacity constructor.
+            if (rewrittenArguments.Length == 0 && node.Type is NamedTypeSymbol namedTypeSymbol)
+            {
+                int capacity = 0;
+
+                if (node.InitializerExpressionOpt is BoundCollectionInitializerExpression collectionInitializer &&
+                    collectionInitializer.Initializers.Length > 0 &&
+                    (
+                        namedTypeSymbol.ConstructedFrom.Equals(_compilation.GetWellKnownType(WellKnownType.System_Collections_Generic_List_T), TypeCompareKind.ConsiderEverything) ||
+                        namedTypeSymbol.ConstructedFrom.Equals(_compilation.GetWellKnownType(WellKnownType.System_Collections_Generic_Dictionary_KV), TypeCompareKind.ConsiderEverything)
+                    ))
+                {
+                    capacity = collectionInitializer.Initializers.Length;
+                }
+                else if (node.InitializerExpressionOpt is BoundObjectInitializerExpression objectInitializer &&
+                    objectInitializer.Initializers.Length > 0 &&
+                    namedTypeSymbol.ConstructedFrom.Equals(_compilation.GetWellKnownType(WellKnownType.System_Collections_Generic_Dictionary_KV), TypeCompareKind.ConsiderEverything))
+                {
+                    capacity = objectInitializer.Initializers.Count(x =>
+                        x is BoundAssignmentOperator { Left: BoundObjectInitializerMember { MemberSymbol: { MetadataName: "Item" } } });
+                }
+
+                if (capacity > 0)
+                {
+                    var capacityConstructor = namedTypeSymbol.InstanceConstructors.FirstOrDefault(x =>
+                            x.ParameterCount == 1 &&
+                            x.Parameters[0].Type.SpecialType == SpecialType.System_Int32 &&
+                            x.DeclaredAccessibility == Accessibility.Public);
+                    Debug.Assert(capacityConstructor != null);
+                    if (capacityConstructor != null)
+                    {
+                        return node.Update(capacityConstructor, ImmutableArray.Create<BoundExpression>(_factory.Literal(capacity)),
+                            argumentNamesOpt: default, argumentRefKindsOpt: argumentRefKindsOpt, expanded: node.Expanded, argsToParamsOpt: default,
+                            constantValueOpt: default, initializerExpressionOpt: null, binderOpt: node.BinderOpt, type: node.Constructor.ContainingType);
+                    }
+                }
+            }
+
+            return node.UpdateArgumentsAndInitializer(rewrittenArguments, argumentRefKindsOpt, newInitializerExpression: null, changeTypeOpt: node.Constructor.ContainingType);
         }
 
         private BoundObjectInitializerExpressionBase MakeObjectCreationInitializerForExpressionTree(BoundObjectInitializerExpressionBase initializerExpressionOpt)

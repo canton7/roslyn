@@ -889,17 +889,18 @@ class Program
             var compVerifier = CompileAndVerify(source, expectedOutput: expectedOutput);
             compVerifier.VerifyIL("Program.Main", @"
 {
-  // Code size       33 (0x21)
+  // Code size       34 (0x22)
   .maxstack  4
-  IL_0000:  newobj     ""System.Collections.Generic.Dictionary<string, int>..ctor()""
-  IL_0005:  dup
-  IL_0006:  ldstr      ""aaa""
-  IL_000b:  ldc.i4.3
-  IL_000c:  callvirt   ""void System.Collections.Generic.Dictionary<string, int>.this[string].set""
-  IL_0011:  ldstr      ""aaa""
-  IL_0016:  callvirt   ""int System.Collections.Generic.Dictionary<string, int>.this[string].get""
-  IL_001b:  call       ""void System.Console.WriteLine(int)""
-  IL_0020:  ret
+  IL_0000:  ldc.i4.1
+  IL_0001:  newobj     ""System.Collections.Generic.Dictionary<string, int>..ctor(int)""
+  IL_0006:  dup
+  IL_0007:  ldstr      ""aaa""
+  IL_000c:  ldc.i4.3
+  IL_000d:  callvirt   ""void System.Collections.Generic.Dictionary<string, int>.this[string].set""
+  IL_0012:  ldstr      ""aaa""
+  IL_0017:  callvirt   ""int System.Collections.Generic.Dictionary<string, int>.this[string].get""
+  IL_001c:  call       ""void System.Console.WriteLine(int)""
+  IL_0021:  ret
 }
 ");
         }
@@ -2207,8 +2208,9 @@ class Test
         return 0;
     }
 
-    public static void DisplayCollection<T>(IEnumerable<T> collection)
+    public static void DisplayCollection<T>(List<T> collection)
     {
+        Console.WriteLine(""Capacity: "" + collection.Capacity);
         foreach (var i in collection)
         {
             Console.WriteLine(i);
@@ -2216,7 +2218,8 @@ class Test
     }
 }
 ";
-            string expectedOutput = @"1
+            string expectedOutput = @"Capacity: 5
+1
 2
 3
 4
@@ -2224,27 +2227,28 @@ class Test
             var compVerifier = CompileAndVerify(source, expectedOutput: expectedOutput);
             compVerifier.VerifyIL("Test.Main", @"
 {
-  // Code size       47 (0x2f)
+  // Code size       48 (0x30)
   .maxstack  3
-  IL_0000:  newobj     ""System.Collections.Generic.List<int>..ctor()""
-  IL_0005:  dup
-  IL_0006:  ldc.i4.1
-  IL_0007:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_000c:  dup
-  IL_000d:  ldc.i4.2
-  IL_000e:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0013:  dup
-  IL_0014:  ldc.i4.3
-  IL_0015:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_001a:  dup
-  IL_001b:  ldc.i4.4
-  IL_001c:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0021:  dup
-  IL_0022:  ldc.i4.5
-  IL_0023:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0028:  call       ""void Test.DisplayCollection<int>(System.Collections.Generic.IEnumerable<int>)""
-  IL_002d:  ldc.i4.0
-  IL_002e:  ret
+  IL_0000:  ldc.i4.5
+  IL_0001:  newobj     ""System.Collections.Generic.List<int>..ctor(int)""
+  IL_0006:  dup
+  IL_0007:  ldc.i4.1
+  IL_0008:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_000d:  dup
+  IL_000e:  ldc.i4.2
+  IL_000f:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0014:  dup
+  IL_0015:  ldc.i4.3
+  IL_0016:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_001b:  dup
+  IL_001c:  ldc.i4.4
+  IL_001d:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0022:  dup
+  IL_0023:  ldc.i4.5
+  IL_0024:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0029:  call       ""void Test.DisplayCollection<int>(System.Collections.Generic.List<int>)""
+  IL_002e:  ldc.i4.0
+  IL_002f:  ret
 }");
         }
 
@@ -2265,8 +2269,9 @@ class Test
         return 0;
     }
 
-    public static void DisplayCollection<T>(IEnumerable<T> collection)
+    public static void DisplayCollection<T>(List<T> collection)
     {
+        Console.WriteLine(""Capacity: "" + collection.Capacity);
         foreach (var i in collection)
         {
             Console.WriteLine(i);
@@ -2274,7 +2279,8 @@ class Test
     }
 }
 ";
-            string expectedOutput = @"1
+            string expectedOutput = @"Capacity: 5
+1
 2
 4
 9
@@ -2282,32 +2288,73 @@ class Test
             var compVerifier = CompileAndVerify(source, expectedOutput: expectedOutput);
             compVerifier.VerifyIL("Test.Main", @"
 {
-  // Code size       53 (0x35)
+  // Code size       54 (0x36)
   .maxstack  3
-  IL_0000:  newobj     ""System.Collections.Generic.List<long>..ctor()""
-  IL_0005:  dup
-  IL_0006:  ldc.i4.1
-  IL_0007:  conv.i8
-  IL_0008:  callvirt   ""void System.Collections.Generic.List<long>.Add(long)""
-  IL_000d:  dup
-  IL_000e:  ldc.i4.2
-  IL_000f:  conv.i8
-  IL_0010:  callvirt   ""void System.Collections.Generic.List<long>.Add(long)""
-  IL_0015:  dup
-  IL_0016:  ldc.i4.4
-  IL_0017:  conv.i8
-  IL_0018:  callvirt   ""void System.Collections.Generic.List<long>.Add(long)""
-  IL_001d:  dup
-  IL_001e:  ldc.i4.s   9
-  IL_0020:  conv.i8
-  IL_0021:  callvirt   ""void System.Collections.Generic.List<long>.Add(long)""
-  IL_0026:  dup
-  IL_0027:  ldc.i4.3
-  IL_0028:  conv.i8
-  IL_0029:  callvirt   ""void System.Collections.Generic.List<long>.Add(long)""
-  IL_002e:  call       ""void Test.DisplayCollection<long>(System.Collections.Generic.IEnumerable<long>)""
-  IL_0033:  ldc.i4.0
-  IL_0034:  ret
+  IL_0000:  ldc.i4.5
+  IL_0001:  newobj     ""System.Collections.Generic.List<long>..ctor(int)""
+  IL_0006:  dup
+  IL_0007:  ldc.i4.1
+  IL_0008:  conv.i8
+  IL_0009:  callvirt   ""void System.Collections.Generic.List<long>.Add(long)""
+  IL_000e:  dup
+  IL_000f:  ldc.i4.2
+  IL_0010:  conv.i8
+  IL_0011:  callvirt   ""void System.Collections.Generic.List<long>.Add(long)""
+  IL_0016:  dup
+  IL_0017:  ldc.i4.4
+  IL_0018:  conv.i8
+  IL_0019:  callvirt   ""void System.Collections.Generic.List<long>.Add(long)""
+  IL_001e:  dup
+  IL_001f:  ldc.i4.s   9
+  IL_0021:  conv.i8
+  IL_0022:  callvirt   ""void System.Collections.Generic.List<long>.Add(long)""
+  IL_0027:  dup
+  IL_0028:  ldc.i4.3
+  IL_0029:  conv.i8
+  IL_002a:  callvirt   ""void System.Collections.Generic.List<long>.Add(long)""
+  IL_002f:  call       ""void Test.DisplayCollection<long>(System.Collections.Generic.List<long>)""
+  IL_0034:  ldc.i4.0
+  IL_0035:  ret
+}");
+        }
+
+        [Fact]
+        public void CollectionInitializerTest_GenericList_WithEmptyElementInitializer()
+        {
+            var source = @"
+using System;
+using System.Collections.Generic;
+using System.Collections;
+
+class Test
+{
+    public static int Main()
+    {
+        List<int> list = new List<int>() { };
+        DisplayCollection(list);
+        return 0;
+    }
+
+    public static void DisplayCollection<T>(List<T> collection)
+    {
+        Console.WriteLine(""Capacity: "" + collection.Capacity);
+        foreach (var i in collection)
+        {
+            Console.WriteLine(i);
+        }
+    }
+}
+";
+            string expectedOutput = @"Capacity: 0";
+            var compVerifier = CompileAndVerify(source, expectedOutput: expectedOutput);
+            compVerifier.VerifyIL("Test.Main", @"
+{
+  // Code size       12 (0xc)
+  .maxstack  1
+  IL_0000:  newobj     ""System.Collections.Generic.List<int>..ctor()""
+  IL_0005:  call       ""void Test.DisplayCollection<int>(System.Collections.Generic.List<int>)""
+  IL_000a:  ldc.i4.0
+  IL_000b:  ret
 }");
         }
 
@@ -2917,10 +2964,12 @@ class Test
         return 0;
     }
 
-    public static void DisplayCollectionOfCollection(IEnumerable<List<int>> collectionOfCollection)
+    public static void DisplayCollectionOfCollection(List<List<int>> collectionOfCollection)
     {
+        Console.WriteLine(""Capacity: "" + collectionOfCollection.Capacity);
         foreach (var collection in collectionOfCollection)
         {
+            Console.WriteLine(""Capacity: "" + collection.Capacity);
             foreach (var i in collection)
             {
                 Console.WriteLine(i);
@@ -2929,11 +2978,14 @@ class Test
     }
 }
 ";
-            string expectedOutput = @"1
+            string expectedOutput = @"Capacity: 2
+Capacity: 5
+1
 2
 3
 4
 5
+Capacity: 5
 6
 7
 8
@@ -2942,48 +2994,51 @@ class Test
             var compVerifier = CompileAndVerify(source, expectedOutput: expectedOutput);
             compVerifier.VerifyIL("Test.Main", @"
 {
-  // Code size      106 (0x6a)
+  // Code size      109 (0x6d)
   .maxstack  5
-  IL_0000:  newobj     ""System.Collections.Generic.List<System.Collections.Generic.List<int>>..ctor()""
-  IL_0005:  dup
-  IL_0006:  newobj     ""System.Collections.Generic.List<int>..ctor()""
-  IL_000b:  dup
-  IL_000c:  ldc.i4.1
-  IL_000d:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0012:  dup
-  IL_0013:  ldc.i4.2
-  IL_0014:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0019:  dup
-  IL_001a:  ldc.i4.3
-  IL_001b:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0020:  dup
-  IL_0021:  ldc.i4.4
-  IL_0022:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0027:  dup
-  IL_0028:  ldc.i4.5
-  IL_0029:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_002e:  callvirt   ""void System.Collections.Generic.List<System.Collections.Generic.List<int>>.Add(System.Collections.Generic.List<int>)""
-  IL_0033:  dup
-  IL_0034:  newobj     ""System.Collections.Generic.List<int>..ctor()""
-  IL_0039:  dup
-  IL_003a:  ldc.i4.6
-  IL_003b:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0040:  dup
-  IL_0041:  ldc.i4.7
-  IL_0042:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0047:  dup
-  IL_0048:  ldc.i4.8
-  IL_0049:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_004e:  dup
-  IL_004f:  ldc.i4.s   9
-  IL_0051:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0056:  dup
-  IL_0057:  ldc.i4.s   10
-  IL_0059:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_005e:  callvirt   ""void System.Collections.Generic.List<System.Collections.Generic.List<int>>.Add(System.Collections.Generic.List<int>)""
-  IL_0063:  call       ""void Test.DisplayCollectionOfCollection(System.Collections.Generic.IEnumerable<System.Collections.Generic.List<int>>)""
-  IL_0068:  ldc.i4.0
-  IL_0069:  ret
+  IL_0000:  ldc.i4.2
+  IL_0001:  newobj     ""System.Collections.Generic.List<System.Collections.Generic.List<int>>..ctor(int)""
+  IL_0006:  dup
+  IL_0007:  ldc.i4.5
+  IL_0008:  newobj     ""System.Collections.Generic.List<int>..ctor(int)""
+  IL_000d:  dup
+  IL_000e:  ldc.i4.1
+  IL_000f:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0014:  dup
+  IL_0015:  ldc.i4.2
+  IL_0016:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_001b:  dup
+  IL_001c:  ldc.i4.3
+  IL_001d:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0022:  dup
+  IL_0023:  ldc.i4.4
+  IL_0024:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0029:  dup
+  IL_002a:  ldc.i4.5
+  IL_002b:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0030:  callvirt   ""void System.Collections.Generic.List<System.Collections.Generic.List<int>>.Add(System.Collections.Generic.List<int>)""
+  IL_0035:  dup
+  IL_0036:  ldc.i4.5
+  IL_0037:  newobj     ""System.Collections.Generic.List<int>..ctor(int)""
+  IL_003c:  dup
+  IL_003d:  ldc.i4.6
+  IL_003e:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0043:  dup
+  IL_0044:  ldc.i4.7
+  IL_0045:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_004a:  dup
+  IL_004b:  ldc.i4.8
+  IL_004c:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0051:  dup
+  IL_0052:  ldc.i4.s   9
+  IL_0054:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0059:  dup
+  IL_005a:  ldc.i4.s   10
+  IL_005c:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0061:  callvirt   ""void System.Collections.Generic.List<System.Collections.Generic.List<int>>.Add(System.Collections.Generic.List<int>)""
+  IL_0066:  call       ""void Test.DisplayCollectionOfCollection(System.Collections.Generic.List<System.Collections.Generic.List<int>>)""
+  IL_006b:  ldc.i4.0
+  IL_006c:  ret
 }");
         }
 
@@ -3004,8 +3059,9 @@ class Test
         return 0;
     }
 
-    public static void DisplayCollection(IEnumerable<B> collection)
+    public static void DisplayCollection(List<B> collection)
     {
+        Console.WriteLine(""Capacity: "" + collection.Capacity);
         foreach (var i in collection)
         {
             i.Display();
@@ -3028,7 +3084,8 @@ public class B
     }
 }
 ";
-            string expectedOutput = @"1
+            string expectedOutput = @"Capacity: 2
+1
 2
 3
 1
@@ -3037,40 +3094,42 @@ public class B
             var compVerifier = CompileAndVerify(source, expectedOutput: expectedOutput);
             compVerifier.VerifyIL("Test.Main", @"
 {
-  // Code size       92 (0x5c)
+  // Code size       94 (0x5e)
   .maxstack  7
-  IL_0000:  newobj     ""System.Collections.Generic.List<B>..ctor()""
-  IL_0005:  dup
-  IL_0006:  ldc.i4.0
-  IL_0007:  newobj     ""B..ctor(int)""
-  IL_000c:  dup
-  IL_000d:  newobj     ""System.Collections.Generic.List<int>..ctor()""
-  IL_0012:  dup
-  IL_0013:  ldc.i4.1
-  IL_0014:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0019:  dup
-  IL_001a:  ldc.i4.2
-  IL_001b:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0020:  dup
-  IL_0021:  ldc.i4.3
-  IL_0022:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0027:  stfld      ""System.Collections.Generic.List<int> B.list""
-  IL_002c:  callvirt   ""void System.Collections.Generic.List<B>.Add(B)""
-  IL_0031:  dup
-  IL_0032:  ldc.i4.1
-  IL_0033:  newobj     ""B..ctor(int)""
-  IL_0038:  dup
-  IL_0039:  ldfld      ""System.Collections.Generic.List<int> B.list""
-  IL_003e:  ldc.i4.2
-  IL_003f:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0044:  dup
-  IL_0045:  ldfld      ""System.Collections.Generic.List<int> B.list""
-  IL_004a:  ldc.i4.3
-  IL_004b:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
-  IL_0050:  callvirt   ""void System.Collections.Generic.List<B>.Add(B)""
-  IL_0055:  call       ""void Test.DisplayCollection(System.Collections.Generic.IEnumerable<B>)""
-  IL_005a:  ldc.i4.0
-  IL_005b:  ret
+  IL_0000:  ldc.i4.2
+  IL_0001:  newobj     ""System.Collections.Generic.List<B>..ctor(int)""
+  IL_0006:  dup
+  IL_0007:  ldc.i4.0
+  IL_0008:  newobj     ""B..ctor(int)""
+  IL_000d:  dup
+  IL_000e:  ldc.i4.3
+  IL_000f:  newobj     ""System.Collections.Generic.List<int>..ctor(int)""
+  IL_0014:  dup
+  IL_0015:  ldc.i4.1
+  IL_0016:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_001b:  dup
+  IL_001c:  ldc.i4.2
+  IL_001d:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0022:  dup
+  IL_0023:  ldc.i4.3
+  IL_0024:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0029:  stfld      ""System.Collections.Generic.List<int> B.list""
+  IL_002e:  callvirt   ""void System.Collections.Generic.List<B>.Add(B)""
+  IL_0033:  dup
+  IL_0034:  ldc.i4.1
+  IL_0035:  newobj     ""B..ctor(int)""
+  IL_003a:  dup
+  IL_003b:  ldfld      ""System.Collections.Generic.List<int> B.list""
+  IL_0040:  ldc.i4.2
+  IL_0041:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0046:  dup
+  IL_0047:  ldfld      ""System.Collections.Generic.List<int> B.list""
+  IL_004c:  ldc.i4.3
+  IL_004d:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0052:  callvirt   ""void System.Collections.Generic.List<B>.Add(B)""
+  IL_0057:  call       ""void Test.DisplayCollection(System.Collections.Generic.List<B>)""
+  IL_005c:  ldc.i4.0
+  IL_005d:  ret
 }");
         }
 
@@ -3252,35 +3311,36 @@ PH:
             var compVerifier = CompileAndVerify(source, expectedOutput: expectedOutput);
             compVerifier.VerifyIL("Test.Main", @"
 {
-  // Code size      103 (0x67)
+  // Code size      104 (0x68)
   .maxstack  5
-  IL_0000:  newobj     ""System.Collections.Generic.List<Contact>..ctor()""
-  IL_0005:  dup
-  IL_0006:  newobj     ""Contact..ctor()""
-  IL_000b:  dup
-  IL_000c:  ldstr      ""Chris Smith""
-  IL_0011:  callvirt   ""void Contact.Name.set""
-  IL_0016:  dup
-  IL_0017:  callvirt   ""System.Collections.Generic.List<string> Contact.PhoneNumbers.get""
-  IL_001c:  ldstr      ""206-555-0101""
-  IL_0021:  callvirt   ""void System.Collections.Generic.List<string>.Add(string)""
-  IL_0026:  dup
-  IL_0027:  callvirt   ""System.Collections.Generic.List<string> Contact.PhoneNumbers.get""
-  IL_002c:  ldstr      ""425-882-8080""
-  IL_0031:  callvirt   ""void System.Collections.Generic.List<string>.Add(string)""
-  IL_0036:  callvirt   ""void System.Collections.Generic.List<Contact>.Add(Contact)""
-  IL_003b:  dup
-  IL_003c:  newobj     ""Contact..ctor()""
-  IL_0041:  dup
-  IL_0042:  ldstr      ""Bob Harris""
-  IL_0047:  callvirt   ""void Contact.Name.set""
-  IL_004c:  dup
-  IL_004d:  callvirt   ""System.Collections.Generic.List<string> Contact.PhoneNumbers.get""
-  IL_0052:  ldstr      ""650-555-0199""
-  IL_0057:  callvirt   ""void System.Collections.Generic.List<string>.Add(string)""
-  IL_005c:  callvirt   ""void System.Collections.Generic.List<Contact>.Add(Contact)""
-  IL_0061:  call       ""void Test.DisplayContacts(System.Collections.Generic.IEnumerable<Contact>)""
-  IL_0066:  ret
+  IL_0000:  ldc.i4.2
+  IL_0001:  newobj     ""System.Collections.Generic.List<Contact>..ctor(int)""
+  IL_0006:  dup
+  IL_0007:  newobj     ""Contact..ctor()""
+  IL_000c:  dup
+  IL_000d:  ldstr      ""Chris Smith""
+  IL_0012:  callvirt   ""void Contact.Name.set""
+  IL_0017:  dup
+  IL_0018:  callvirt   ""System.Collections.Generic.List<string> Contact.PhoneNumbers.get""
+  IL_001d:  ldstr      ""206-555-0101""
+  IL_0022:  callvirt   ""void System.Collections.Generic.List<string>.Add(string)""
+  IL_0027:  dup
+  IL_0028:  callvirt   ""System.Collections.Generic.List<string> Contact.PhoneNumbers.get""
+  IL_002d:  ldstr      ""425-882-8080""
+  IL_0032:  callvirt   ""void System.Collections.Generic.List<string>.Add(string)""
+  IL_0037:  callvirt   ""void System.Collections.Generic.List<Contact>.Add(Contact)""
+  IL_003c:  dup
+  IL_003d:  newobj     ""Contact..ctor()""
+  IL_0042:  dup
+  IL_0043:  ldstr      ""Bob Harris""
+  IL_0048:  callvirt   ""void Contact.Name.set""
+  IL_004d:  dup
+  IL_004e:  callvirt   ""System.Collections.Generic.List<string> Contact.PhoneNumbers.get""
+  IL_0053:  ldstr      ""650-555-0199""
+  IL_0058:  callvirt   ""void System.Collections.Generic.List<string>.Add(string)""
+  IL_005d:  callvirt   ""void System.Collections.Generic.List<Contact>.Add(Contact)""
+  IL_0062:  call       ""void Test.DisplayContacts(System.Collections.Generic.IEnumerable<Contact>)""
+  IL_0067:  ret
 }");
         }
 
@@ -3484,6 +3544,178 @@ static class Program
 }";
             var comp = CSharpTestBase.CreateCompilation(source, options: TestOptions.ReleaseExe);
             CompileAndVerify(comp, expectedOutput: "12");
+        }
+
+
+        [Fact]
+        public void CollectionInitializerTest_GenericDictionary_IndexerInitializer()
+        {
+            var source = @"
+using System;
+using System.Collections.Generic;
+using System.Collections;
+
+class Test
+{
+    public static int Main()
+    {
+        Dictionary<int, string> dict = new Dictionary<int, string>()
+        {
+            [1] = ""a"",
+            [2] = ""b"",
+
+        };
+        DisplayCollection(dict);
+        return 0;
+    }
+
+    public static void DisplayCollection<T>(IEnumerable<T> collection)
+    {
+        foreach (var i in collection)
+        {
+            Console.WriteLine(i);
+        }
+    }
+}
+";
+            string expectedOutput = @"[1, a]
+[2, b]";
+            var compVerifier = CompileAndVerify(source, expectedOutput: expectedOutput);
+            compVerifier.VerifyIL("Test.Main", @"
+{
+  // Code size       37 (0x25)
+  .maxstack  4
+  IL_0000:  ldc.i4.2
+  IL_0001:  newobj     ""System.Collections.Generic.Dictionary<int, string>..ctor(int)""
+  IL_0006:  dup
+  IL_0007:  ldc.i4.1
+  IL_0008:  ldstr      ""a""
+  IL_000d:  callvirt   ""void System.Collections.Generic.Dictionary<int, string>.this[int].set""
+  IL_0012:  dup
+  IL_0013:  ldc.i4.2
+  IL_0014:  ldstr      ""b""
+  IL_0019:  callvirt   ""void System.Collections.Generic.Dictionary<int, string>.this[int].set""
+  IL_001e:  call       ""void Test.DisplayCollection<System.Collections.Generic.KeyValuePair<int, string>>(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<int, string>>)""
+  IL_0023:  ldc.i4.0
+  IL_0024:  ret
+}");
+        }
+
+        [Fact]
+        public void CollectionInitializerTest_GenericDictionary_CollectionInitializer()
+        {
+            var source = @"
+using System;
+using System.Collections.Generic;
+using System.Collections;
+
+class Test
+{
+    public static int Main()
+    {
+        Dictionary<int, string> dict = new Dictionary<int, string>()
+        {
+            { 1, ""a"" },
+            { 2, ""b"" },
+        };
+        DisplayCollection(dict);
+        return 0;
+    }
+
+    public static void DisplayCollection<T>(IEnumerable<T> collection)
+    {
+        foreach (var i in collection)
+        {
+            Console.WriteLine(i);
+        }
+    }
+}
+";
+            string expectedOutput = @"[1, a]
+[2, b]";
+            var compVerifier = CompileAndVerify(source, expectedOutput: expectedOutput);
+            compVerifier.VerifyIL("Test.Main", @"
+{
+  // Code size       37 (0x25)
+  .maxstack  4
+  IL_0000:  ldc.i4.2
+  IL_0001:  newobj     ""System.Collections.Generic.Dictionary<int, string>..ctor(int)""
+  IL_0006:  dup
+  IL_0007:  ldc.i4.1
+  IL_0008:  ldstr      ""a""
+  IL_000d:  callvirt   ""void System.Collections.Generic.Dictionary<int, string>.Add(int, string)""
+  IL_0012:  dup
+  IL_0013:  ldc.i4.2
+  IL_0014:  ldstr      ""b""
+  IL_0019:  callvirt   ""void System.Collections.Generic.Dictionary<int, string>.Add(int, string)""
+  IL_001e:  call       ""void Test.DisplayCollection<System.Collections.Generic.KeyValuePair<int, string>>(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<int, string>>)""
+  IL_0023:  ldc.i4.0
+  IL_0024:  ret
+}");
+        }
+
+        [Fact]
+        public void CollectionInitializerTest_GenericListSubclass()
+        {
+            var source = @"
+using System;
+using System.Collections.Generic;
+using System.Collections;
+
+class Test
+{
+    public static int Main()
+    {
+        C<int> list = new C<int>() { 1, 2, 3, 4, 5 };
+        DisplayCollection(list);
+        return 0;
+    }
+
+    public static void DisplayCollection<T>(IEnumerable<T> collection)
+    {
+        foreach (var i in collection)
+        {
+            Console.WriteLine(i);
+        }
+    }
+}
+
+class C<T> : List<T>
+{
+    public C() : base() { }
+    public C(int capacity) : base(capacity) { }
+}
+";
+            string expectedOutput = @"1
+2
+3
+4
+5";
+            var compVerifier = CompileAndVerify(source, expectedOutput: expectedOutput);
+            compVerifier.VerifyIL("Test.Main", @"
+{
+  // Code size       47 (0x2f)
+  .maxstack  3
+  IL_0000:  newobj     ""C<int>..ctor()""
+  IL_0005:  dup
+  IL_0006:  ldc.i4.1
+  IL_0007:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_000c:  dup
+  IL_000d:  ldc.i4.2
+  IL_000e:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0013:  dup
+  IL_0014:  ldc.i4.3
+  IL_0015:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_001a:  dup
+  IL_001b:  ldc.i4.4
+  IL_001c:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0021:  dup
+  IL_0022:  ldc.i4.5
+  IL_0023:  callvirt   ""void System.Collections.Generic.List<int>.Add(int)""
+  IL_0028:  call       ""void Test.DisplayCollection<int>(System.Collections.Generic.IEnumerable<int>)""
+  IL_002d:  ldc.i4.0
+  IL_002e:  ret
+}");
         }
 
         #endregion
