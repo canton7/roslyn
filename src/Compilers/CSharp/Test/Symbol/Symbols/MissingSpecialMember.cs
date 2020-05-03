@@ -806,6 +806,7 @@ namespace System
                             WellKnownType.System_Collections_ICollection,
                             WellKnownType.System_Collections_Generic_EqualityComparer_T,
                             WellKnownType.System_Collections_Generic_List_T,
+                            WellKnownType.System_Collections_Generic_Dictionary_KV,
                             WellKnownType.System_Collections_Generic_IDictionary_KV,
                             WellKnownType.System_Collections_Generic_IReadOnlyDictionary_KV,
                             WellKnownType.System_Collections_ObjectModel_Collection_T,
