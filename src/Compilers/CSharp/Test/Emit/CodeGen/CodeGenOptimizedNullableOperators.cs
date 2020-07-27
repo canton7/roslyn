@@ -2419,5 +2419,64 @@ class Program
   IL_0060:  ret
 }");
         }
+
+        [Fact]
+        public void TestFoo()
+        {
+            string source = @"
+class Program
+{
+    static void Main() 
+    {
+        M(null);
+        M('-');
+        M('=');
+    }
+
+    static void M(char? x)
+    {
+        System.Console.WriteLine(x == '-' ? ""Y"" : ""N"");
+    }
+}
+";
+
+
+            var comp = CompileAndVerify(source, expectedOutput: @"
+N
+Y
+N");
+            comp.VerifyIL("Program.M", @"
+{
+  // Code size       97 (0x61)
+  .maxstack  2
+  IL_0000:  ldc.i4.s   42
+  IL_0002:  box        ""int""
+  IL_0007:  call       ""void System.Console.WriteLine(object)""
+  IL_000c:  ldc.i4.s   42
+  IL_000e:  box        ""int""
+  IL_0013:  call       ""void System.Console.WriteLine(object)""
+  IL_0018:  ldc.i4.0
+  IL_0019:  ldc.i4.s   42
+  IL_001b:  sub
+  IL_001c:  box        ""int""
+  IL_0021:  call       ""void System.Console.WriteLine(object)""
+  IL_0026:  ldc.i4.s   42
+  IL_0028:  box        ""int""
+  IL_002d:  call       ""void System.Console.WriteLine(object)""
+  IL_0032:  ldc.i4.0
+  IL_0033:  box        ""int""
+  IL_0038:  call       ""void System.Console.WriteLine(object)""
+  IL_003d:  ldc.i4.0
+  IL_003e:  box        ""int""
+  IL_0043:  call       ""void System.Console.WriteLine(object)""
+  IL_0048:  ldc.i4.s   42
+  IL_004a:  box        ""int""
+  IL_004f:  call       ""void System.Console.WriteLine(object)""
+  IL_0054:  ldc.i4.s   42
+  IL_0056:  box        ""int""
+  IL_005b:  call       ""void System.Console.WriteLine(object)""
+  IL_0060:  ret
+}");
+        }
     }
 }
